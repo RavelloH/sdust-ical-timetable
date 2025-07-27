@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from hashlib import md5
-from typing import Any
+from typing import Any, Optional
 
 
 def EvenWeeks(start: int, end: int) -> list[int]:
@@ -43,12 +43,33 @@ class Course:
         """
         return f"{self.name} - {self.classroom}"
 
-    def description(self) -> str:
+    def description(self, current_week: Optional[int] = None, course_progress: Optional[dict] = None) -> str:
         """
         每一次课程日历项目的介绍信息：
-        如希望传递「当前是第几周」这样的参数，可在这里预留格式化变量，并在 School.generate() 函数中修改
+        current_week: 当前周次
+        course_progress: 包含课程进度信息的字典
         """
-        return f"任课教师：{self.teacher}。"
+        desc_lines = [f"任课教师：{self.teacher}"]
+        
+        if course_progress and current_week:
+            # 课程进度：第n次课，共n次课，剩n次课
+            current_class_num = course_progress.get('current_class_num', 0)
+            total_classes = course_progress.get('total_classes', 0)
+            remaining_classes = total_classes - current_class_num
+            desc_lines.append(f"课程进度：第{current_class_num}次课，共{total_classes}次课，剩{remaining_classes}次课")
+            
+            # 本周进度：第n次课，共n次课，剩n次课
+            week_current = course_progress.get('week_current_class', 0)
+            week_total = course_progress.get('week_total_classes', 0)
+            week_remaining = week_total - week_current
+            desc_lines.append(f"本周进度：第{week_current}次课，共{week_total}次课，剩{week_remaining}次课")
+            
+            # 下次上课：本周三
+            next_class_info = course_progress.get('next_class_info', '')
+            if next_class_info:
+                desc_lines.append(f"下次上课：{next_class_info}")
+        
+        return "\\n".join(desc_lines)
 
 @dataclass
 class School:
@@ -90,6 +111,10 @@ class School:
     def generate(self) -> str:
         runtime = datetime.now()
         texts = []
+        
+        # 计算每门课程的总体进度信息
+        course_stats = self._calculate_course_stats()
+        
         for course in self.courses:
             if not course.location:
                 course.location = []
@@ -98,25 +123,34 @@ class School:
             elif isinstance(course.location, Geo):
                 course.location = course.location.result()
             assert isinstance(course.location, list), "课程定位信息类型不正确"
-        coures = [
-            [
-                "BEGIN:VEVENT",
-                f"SUMMARY:{course.title()}",
-                f"DESCRIPTION:{course.description()}",
-                f"DTSTART;TZID=Asia/Shanghai:{
-                    self.time(week, course.weekday, course.indexes[0]):%Y%m%dT%H%M%S}",
-                f"DTEND;TZID=Asia/Shanghai:{
-                    self.time(week, course.weekday, course.indexes[-1], True):%Y%m%dT%H%M%S}",
-                f"DTSTAMP:{runtime:%Y%m%dT%H%M%SZ}",
-                f"UID:{md5(str((course.title, week, course.weekday,
-                               course.indexes[0])).encode()).hexdigest()}",
-                f"URL;VALUE=URI:",
-                *course.location,
-                "END:VEVENT",
-            ]
-            for course in self.courses
-            for week in course.weeks
-        ]
+            
+        weekday_names = {1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六', 7: '周日'}
+        
+        coures = []
+        for course in self.courses:
+            course_key = (course.name, course.teacher)
+            stats = course_stats.get(course_key, {})
+            
+            for week in course.weeks:
+                # 计算当前课程的进度信息
+                progress = self._calculate_class_progress(course, week, stats, weekday_names)
+                
+                coures.append([
+                    "BEGIN:VEVENT",
+                    f"SUMMARY:{course.title()}",
+                    f"DESCRIPTION:{course.description(week, progress)}",
+                    f"DTSTART;TZID=Asia/Shanghai:{
+                        self.time(week, course.weekday, course.indexes[0]):%Y%m%dT%H%M%S}",
+                    f"DTEND;TZID=Asia/Shanghai:{
+                        self.time(week, course.weekday, course.indexes[-1], True):%Y%m%dT%H%M%S}",
+                    f"DTSTAMP:{runtime:%Y%m%dT%H%M%SZ}",
+                    f"UID:{md5(str((course.title, week, course.weekday,
+                                   course.indexes[0])).encode()).hexdigest()}",
+                    f"URL;VALUE=URI:",
+                    *course.location,
+                    "END:VEVENT",
+                ])
+                
         items = [i for j in coures for i in j]
         for line in self.HEADERS + items + self.FOOTERS:
             first = True
@@ -125,6 +159,104 @@ class School:
                 line = line[72:]
                 first = False
         return "\n".join(texts)
+    
+    def _calculate_course_stats(self) -> dict:
+        """计算每门课程的统计信息"""
+        course_stats = {}
+        
+        for course in self.courses:
+            key = (course.name, course.teacher)
+            if key not in course_stats:
+                course_stats[key] = {
+                    'all_weeks': set(),
+                    'weekdays': set(),
+                    'schedules': []
+                }
+            
+            course_stats[key]['all_weeks'].update(course.weeks)
+            course_stats[key]['weekdays'].add(course.weekday)
+            course_stats[key]['schedules'].append({
+                'weekday': course.weekday,
+                'weeks': course.weeks,
+                'indexes': course.indexes
+            })
+        
+        return course_stats
+    
+    def _calculate_class_progress(self, course, current_week: int, stats: dict, weekday_names: dict) -> dict:
+        """计算具体某次课的进度信息"""
+        course_key = (course.name, course.teacher)
+        
+        # 获取这门课程在当前时间段的所有周次
+        current_schedule_weeks = sorted(course.weeks)
+        
+        # 获取这门课程的所有时间段的所有周次和时间安排
+        all_course_events = []
+        for schedule in stats.get('schedules', []):
+            for week in schedule['weeks']:
+                all_course_events.append((week, schedule['weekday']))
+        
+        # 按周次和星期排序
+        all_course_events.sort()
+        total_classes = len(all_course_events)
+        
+        # 计算当前是第几次课（在整门课程中）
+        current_class_num = 0
+        for week, weekday in all_course_events:
+            if week < current_week or (week == current_week and weekday <= course.weekday):
+                current_class_num += 1
+            else:
+                break
+        
+        # 计算本周的课程进度（考虑本周所有的课程时间段）
+        week_total = 0
+        week_current = 0
+        
+        # 统计本周这门课的所有时间段
+        this_week_events = [(week, weekday) for week, weekday in all_course_events if week == current_week]
+        week_total = len(this_week_events)
+        
+        # 计算本周已上的课程数（到当前星期为止）
+        for week, weekday in this_week_events:
+            if weekday <= course.weekday:
+                week_current += 1
+        
+        if week_total == 0:
+            week_total = 1
+            week_current = 0
+        
+        # 查找下次上课时间
+        next_class_info = ""
+        next_event = None
+        
+        # 在所有事件中查找下次上课
+        for week, weekday in all_course_events:
+            if week > current_week or (week == current_week and weekday > course.weekday):
+                next_event = (week, weekday)
+                break
+        
+        if next_event:
+            next_week, next_weekday = next_event
+            weekday_name = weekday_names.get(next_weekday, f"周{next_weekday}")
+            
+            if next_week == current_week:
+                next_class_info = f"本{weekday_name}"
+            elif next_week == current_week + 1:
+                next_class_info = f"下{weekday_name}"
+            else:
+                weeks_diff = next_week - current_week
+                if weeks_diff <= 4:
+                    next_class_info = f"{weeks_diff}周后{weekday_name}"
+                else:
+                    next_class_info = f"第{next_week}周{weekday_name}"
+        
+        return {
+            'current_class_num': current_class_num,
+            'total_classes': total_classes,
+            'week_current_class': week_current,
+            'week_total_classes': week_total,
+            'next_class_info': next_class_info
+        }
 
 
 @dataclass
