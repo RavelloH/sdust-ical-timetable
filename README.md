@@ -13,7 +13,7 @@
 - 打包为exe
 
 ## 使用
-1. 前往[Releases](https://github.com/junyilou/python-ical-timetable/releases)下载最新版本的可执行文件。
+1. 前往[Releases](https://github.com/ravelloh/sdust-ical-timetable/releases)下载最新版本的可执行文件。
 2. 运行此文件，随后完成以下步骤：
   1. 前往[教务系统的学期理论课表](https://jwgl.sdust.edu.cn/jsxsd/xskb/xskb_list.do)页面，点击打印，下载生成的xls文件
   2. 将下载的文件拖入程序，或者放在程序同目录下，再重新运行程序
