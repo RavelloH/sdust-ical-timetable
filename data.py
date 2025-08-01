@@ -54,6 +54,10 @@ class Course:
         """
         desc_lines = [f"任课教师：{self.teacher}"]
         
+        # 添加当前周次信息
+        if current_week:
+            desc_lines.append(f"本周周次：第{current_week}周")
+        
         if course_progress and current_week:
             # 课程进度：第n次课，共n次课，剩n次课
             current_class_num = course_progress.get('current_class_num', 0)
@@ -67,9 +71,12 @@ class Course:
             week_remaining = week_total - week_current
             desc_lines.append(f"本周进度：第{week_current}次课，共{week_total}次课，剩{week_remaining}次课")
             
-            # 下次上课：本周三
+            # 下次上课：2025/12/1(下周三)
+            next_class_date = course_progress.get('next_class_date', '')
             next_class_info = course_progress.get('next_class_info', '')
-            if next_class_info:
+            if next_class_date and next_class_info:
+                desc_lines.append(f"下次上课：{next_class_date}({next_class_info})")
+            elif next_class_info:
                 desc_lines.append(f"下次上课：{next_class_info}")
         
         return "\\n".join(desc_lines)
@@ -242,6 +249,10 @@ class School:
             next_week, next_weekday = next_event
             weekday_name = weekday_names.get(next_weekday, f"周{next_weekday}")
             
+            # 计算下次上课的具体日期
+            next_class_datetime = self.time(next_week, next_weekday, 1)  # 使用第一节课的时间
+            next_class_date = next_class_datetime.strftime("%Y/%m/%d")
+            
             if next_week == current_week:
                 next_class_info = f"本{weekday_name}"
             elif next_week == current_week + 1:
@@ -252,13 +263,17 @@ class School:
                     next_class_info = f"{weeks_diff}周后{weekday_name}"
                 else:
                     next_class_info = f"第{next_week}周{weekday_name}"
+        else:
+            next_class_date = ""
+            next_class_info = ""
         
         return {
             'current_class_num': current_class_num,
             'total_classes': total_classes,
             'week_current_class': week_current,
             'week_total_classes': week_total,
-            'next_class_info': next_class_info
+            'next_class_info': next_class_info,
+            'next_class_date': next_class_date
         }
 
 
