@@ -32,12 +32,17 @@ def classroom_to_location(classroom: str, course_name: str = "") -> str:
          品学楼B107 -> 山东科技大学品学楼
          线上虚拟教室 -> 返回空字符串（不设置位置）
          体育课程 -> 返回空字符串（不设置位置）
+         未知教室 -> 返回空字符串（不设置位置）
     """
     if not classroom or classroom.strip() == "":
         return ""
     
     classroom = classroom.strip()
     course_name = course_name.strip()
+    
+    # 如果是未知教室，不设置位置
+    if classroom == "未知教室":
+        return ""
     
     # 如果是线上虚拟教室，不设置位置
     if classroom == "线上虚拟教室":
@@ -56,7 +61,7 @@ def classroom_to_location(classroom: str, course_name: str = "") -> str:
         (r'^(J\d+)-\d+室?$', r'山东科技大学\1'),           # J7-106室 -> 山东科技大学J7
         (r'^(JB区[^-室]+)', r'山东科技大学\1'),            # JB区乒乓球馆室 -> 山东科技大学JB区乒乓球馆
         (r'^(实训\d+层)-\d+室?$', r'山东科技大学实训楼'),    # 实训6层-609室 -> 山东科技大学实训楼
-        (r'^([^-\d]+).*$', r'山东科技大学\1'),           # 品学楼B107 -> 山东科技大学品学楼
+        (r'^([^-]*?[^\d-])[A-Z]?\d+.*$', r'山东科技大学\1'),  # 品学楼B107 -> 山东科技大学品学楼
     ]
     
     for pattern, replacement in building_patterns:

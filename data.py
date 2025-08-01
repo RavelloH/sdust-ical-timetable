@@ -41,7 +41,10 @@ class Course:
         每一次课程日历项的标题：
         如希望传递「当前是第几周」这样的参数，可在这里预留格式化变量，并在 School.generate() 函数中修改
         """
-        return f"{self.name} - {self.classroom}"
+        if self.classroom == "未知教室":
+            return self.name
+        else:
+            return f"{self.name} - {self.classroom}"
 
     def description(self, current_week: Optional[int] = None, course_progress: Optional[dict] = None) -> str:
         """
