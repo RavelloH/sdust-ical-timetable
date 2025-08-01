@@ -25,6 +25,22 @@ def normalize_course_name(course_name: str) -> str:
     
     return normalized_name
 
+def normalize_classroom_name(classroom: str) -> str:
+    """
+    规范化教室名称，处理不规范的写法
+    例如：Js1-305室 -> S1-305室
+    """
+    if not classroom:
+        return classroom
+    
+    classroom = classroom.strip()
+    
+    # 规范化教室名称 - 处理不规范的写法
+    # Js1-305室 -> S1-305室
+    classroom = re.sub(r'^Js(\d+)', r'S\1', classroom)
+    
+    return classroom
+
 def classroom_to_location(classroom: str, course_name: str = "") -> str:
     """
     将教室名转换为地图位置格式
@@ -41,8 +57,7 @@ def classroom_to_location(classroom: str, course_name: str = "") -> str:
     course_name = course_name.strip()
     
     # 规范化教室名称 - 处理不规范的写法
-    # Js1-305室 -> S1-305室
-    classroom = re.sub(r'^Js(\d+)', r'S\1', classroom)
+    classroom = normalize_classroom_name(classroom)
     
     # 如果是未知教室，不设置位置
     if classroom == "未知教室":
@@ -117,7 +132,7 @@ def parse_course_info(course_text):
                 'name': normalize_course_name(course_name),  # 使用规范化的课程名
                 'teacher': teacher,
                 'weeks': weeks,
-                'classroom': classroom
+                'classroom': normalize_classroom_name(classroom)  # 使用规范化的教室名
             })
         
         i += 4  # 跳过已处理的4行
