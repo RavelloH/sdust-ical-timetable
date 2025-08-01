@@ -40,6 +40,10 @@ def classroom_to_location(classroom: str, course_name: str = "") -> str:
     classroom = classroom.strip()
     course_name = course_name.strip()
     
+    # 规范化教室名称 - 处理不规范的写法
+    # Js1-305室 -> S1-305室
+    classroom = re.sub(r'^Js(\d+)', r'S\1', classroom)
+    
     # 如果是未知教室，不设置位置
     if classroom == "未知教室":
         return ""
@@ -59,6 +63,7 @@ def classroom_to_location(classroom: str, course_name: str = "") -> str:
     # 提取建筑物名称
     building_patterns = [
         (r'^(J\d+)-\d+室?$', r'山东科技大学\1'),           # J7-106室 -> 山东科技大学J7
+        (r'^(S\d+)-\d+室?$', r'山东科技大学\1'),           # S1-305室 -> 山东科技大学S1
         (r'^(JB区[^-室]+)', r'山东科技大学\1'),            # JB区乒乓球馆室 -> 山东科技大学JB区乒乓球馆
         (r'^(实训\d+层)-\d+室?$', r'山东科技大学实训楼'),    # 实训6层-609室 -> 山东科技大学实训楼
         (r'^([^-]*?[^\d-])[A-Z]?\d+.*$', r'山东科技大学\1'),  # 品学楼B107 -> 山东科技大学品学楼

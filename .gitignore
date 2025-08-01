@@ -2,3 +2,7 @@
 release
 .vscode
 .venv
+build
+*.exe
+*.spec
+*.zip
