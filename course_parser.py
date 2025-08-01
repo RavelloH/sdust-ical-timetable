@@ -5,29 +5,23 @@ from data import Course, Weeks, OddWeeks, EvenWeeks, Geo
 
 def normalize_course_name(course_name: str) -> str:
     """
-    规范化课程名称，去除多余的后缀和括号内容
-    例如：大学英语（A）（2-2） -> 大学英语
+    规范化课程名称，去除所有括号及其内容
+    例如：电路（2） -> 电路
+         大学英语（A）（2-2） -> 大学英语
     """
     if not course_name:
         return course_name
     
-    # 移除常见的课程编号格式
-    # 匹配 （字母）（数字-数字） 或 （数字-数字） 等格式
-    patterns_to_remove = [
-        r'（[A-Za-z]）（\d+-\d+）$',    # （A）（2-2）
-        r'（\d+-\d+）$',               # （2-2）
-        r'（[A-Za-z]）$',              # （A）
-        r'（[IVX]+）$',                # （IV）罗马数字
-        r'\([A-Za-z]\)\(\d+-\d+\)$',   # (A)(2-2)
-        r'\(\d+-\d+\)$',               # (2-2)
-        r'\([A-Za-z]\)$',              # (A)
-        r'\([IVX]+\)$',                # (IV)
-    ]
-    
     normalized_name = course_name.strip()
     
-    for pattern in patterns_to_remove:
-        normalized_name = re.sub(pattern, '', normalized_name).strip()
+    # 去除所有中文括号及其内容
+    normalized_name = re.sub(r'（[^）]*）', '', normalized_name)
+    
+    # 去除所有英文括号及其内容
+    normalized_name = re.sub(r'\([^)]*\)', '', normalized_name)
+    
+    # 去除多余的空格
+    normalized_name = re.sub(r'\s+', ' ', normalized_name).strip()
     
     return normalized_name
 
