@@ -1,7 +1,7 @@
 # 📚 SDUST 课表 (.ics) 生成工具
 > 本工具基于 [junyilou/python-ical-timetable](https://github.com/junyilou/python-ical-timetable) 修改。
 
-![sdust](images/sdust.jpg)
+![sdust](image/sdust.jpg)
 
 两步即可生成你的课表日历文件 (.ics)，支持 iOS、Android 等手机日历导入。  
 其中，地图定位及预测出发时间功能依赖于 iOS 的 Apple Maps，安卓无法使用。
@@ -13,7 +13,7 @@
 - 打包为exe
 
 ## 使用
-1. 前往[Releases](https://github.com/junyilou/python-ical-timetable/releases)下载最新版本的可执行文件。
+1. 前往[Releases](https://github.com/ravelloh/sdust-ical-timetable/releases)下载最新版本的可执行文件。
 2. 运行此文件，随后完成以下步骤：
   1. 前往[教务系统的学期理论课表](https://jwgl.sdust.edu.cn/jsxsd/xskb/xskb_list.do)页面，点击打印，下载生成的xls文件
   2. 将下载的文件拖入程序，或者放在程序同目录下，再重新运行程序
